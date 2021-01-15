@@ -1,0 +1,194 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: 2020-12-23 09:52+0900\n"
+"PO-Revision-Date: 2020-12-23 09:54+0900\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+"X-Generator: Poedit 2.4.2\n"
+
+#: o2popper.py:58
+msgid "Waiting to be sent..."
+msgstr "送信されるのを待っています..."
+
+#: o2popper.py:76
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: o2popper.py:194
+msgid "Delay Sending"
+msgstr "送信遅延"
+
+#: o2popper.py:205
+msgid "Settings..."
+msgstr "設定..."
+
+#: o2popper.py:215
+msgid "Monitor..."
+msgstr "モニター..."
+
+#: o2popper.py:225
+msgid "Start"
+msgstr "開始"
+
+#: o2popper.py:228
+msgid "Stop"
+msgstr "停止"
+
+#: o2popper.py:241
+msgid "About..."
+msgstr "O2Popper について..."
+
+#: o2popper.py:247
+msgid "Exit"
+msgstr "終了"
+
+#: o2popper.py:260
+msgid "Settings"
+msgstr "設定"
+
+#: o2popper.py:309
+msgid "Monitor"
+msgstr "モニター"
+
+#: o2popper.py:387 settings.py:306
+msgid "Error"
+msgstr "エラー"
+
+#: o2popper.py:387
+msgid "is running"
+msgstr "は実行中です"
+
+#: settings.py:31
+msgid "Authorization"
+msgstr "認可"
+
+#: settings.py:34
+msgid "Your emal:"
+msgstr "あなたのEメールアドレス:"
+
+#: settings.py:45
+msgid "Auth..."
+msgstr "認可..."
+
+#: settings.py:51
+msgid "Please don't input group-address!"
+msgstr "グループアドレスを入力しないでください！"
+
+#: settings.py:63
+msgid "Secret File"
+msgstr "シークレット ファイル"
+
+#: settings.py:66
+msgid "Built-in"
+msgstr "組み込み"
+
+#: settings.py:79
+msgid "Browse..."
+msgstr "参照..."
+
+#: settings.py:89
+msgid "Listen"
+msgstr "接続の受付"
+
+#: settings.py:95
+msgid "SMTP"
+msgstr ""
+
+#: settings.py:100 settings.py:115
+msgid "Port"
+msgstr "ポート"
+
+#: settings.py:112
+msgid "POP"
+msgstr ""
+
+#: settings.py:126
+msgid "Initial State:"
+msgstr "初期状態:"
+
+#: settings.py:143
+msgid "Block SMTP"
+msgstr "SMTP遮断"
+
+#: settings.py:149
+msgid "To+Cc Max"
+msgstr "To+Cc 最大数"
+
+#: settings.py:157
+msgid "Exclude"
+msgstr "除外"
+
+#: settings.py:166
+msgid "Remove X-Mailer/User-Agent header"
+msgstr "X-Mailer/User-Agent ヘッダーを削除"
+
+#: settings.py:172
+msgid "Send Delay"
+msgstr "送信遅延"
+
+#: settings.py:179
+msgid "sec"
+msgstr "秒"
+
+#: settings.py:191
+msgid "OK"
+msgstr ""
+
+#: settings.py:249 settings.py:298
+msgid "Invalid email"
+msgstr "不正なEメール"
+
+#: settings.py:254
+msgid "Question"
+msgstr "質問"
+
+#: settings.py:254
+msgid "Reset auth-token?"
+msgstr "認証トークンをリセットしますか?"
+
+#: settings.py:274
+msgid "Authorization was successful"
+msgstr "認可は成功しました"
+
+#: settings.py:274
+msgid "Success"
+msgstr "成功"
+
+#: settings.py:289
+msgid "Choose a file"
+msgstr "ファイルを選択"
+
+#: settings.py:306
+msgid "File does not exist:"
+msgstr "ファイルが存在しません:"
+
+#: settings.py:310
+msgid "Both SMTP and POP are unchecked"
+msgstr "SMTPとPOPの両方がチェックされていません"
+
+#: monitor.py:106
+msgid "Clear"
+msgstr "クリア"
+
+#: monitor.py:120
+msgid "Close"
+msgstr "閉じる"
+
+#~ msgid "O2Popper Settings"
+#~ msgstr "O2Popper の設定"
+
+#~ msgid "O2Popper Monitor"
+#~ msgstr "O2Popper モニター"
+
+#~ msgid "Initialize Auth"
+#~ msgstr "認証の初期化"
