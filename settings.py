@@ -31,7 +31,7 @@ class Settings(wx.Dialog):
         sbox1 = wx.StaticBox(self, label=_("Authorization"))
         sizer1 = wx.StaticBoxSizer(sbox1, wx.VERTICAL)
 
-        text11 = wx.StaticText(self, label=_("Your emal:"))
+        text11 = wx.StaticText(self, label=_("Your email:"))
         sizer1.Add(text11, flag=wx.LEFT|wx.TOP, border=5)
 
         hbox1 = wx.BoxSizer(wx.HORIZONTAL)

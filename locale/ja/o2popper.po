@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2020-12-23 09:52+0900\n"
-"PO-Revision-Date: 2020-12-23 09:54+0900\n"
+"POT-Creation-Date: 2021-01-18 08:18+0900\n"
+"PO-Revision-Date: 2021-01-18 08:25+0900\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ja\n"
@@ -16,51 +16,51 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 "X-Generator: Poedit 2.4.2\n"
 
-#: o2popper.py:58
+#: o2popper.py:55
 msgid "Waiting to be sent..."
 msgstr "送信されるのを待っています..."
 
-#: o2popper.py:76
+#: o2popper.py:73
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: o2popper.py:194
+#: o2popper.py:188
 msgid "Delay Sending"
 msgstr "送信遅延"
 
-#: o2popper.py:205
+#: o2popper.py:199
 msgid "Settings..."
 msgstr "設定..."
 
-#: o2popper.py:215
+#: o2popper.py:209
 msgid "Monitor..."
 msgstr "モニター..."
 
-#: o2popper.py:225
+#: o2popper.py:219
 msgid "Start"
 msgstr "開始"
 
-#: o2popper.py:228
+#: o2popper.py:222
 msgid "Stop"
 msgstr "停止"
 
-#: o2popper.py:241
+#: o2popper.py:235
 msgid "About..."
 msgstr "O2Popper について..."
 
-#: o2popper.py:247
+#: o2popper.py:241
 msgid "Exit"
 msgstr "終了"
 
-#: o2popper.py:260
+#: o2popper.py:254
 msgid "Settings"
 msgstr "設定"
 
-#: o2popper.py:309
+#: o2popper.py:301
 msgid "Monitor"
 msgstr "モニター"
 
-#: o2popper.py:387 settings.py:306
+#: o2popper.py:387 settings.py:318
 msgid "Error"
 msgstr "エラー"
 
@@ -73,7 +73,7 @@ msgid "Authorization"
 msgstr "認可"
 
 #: settings.py:34
-msgid "Your emal:"
+msgid "Your email:"
 msgstr "あなたのEメールアドレス:"
 
 #: settings.py:45
@@ -144,35 +144,35 @@ msgstr "秒"
 msgid "OK"
 msgstr ""
 
-#: settings.py:249 settings.py:298
+#: settings.py:249 settings.py:310
 msgid "Invalid email"
 msgstr "不正なEメール"
 
-#: settings.py:254
+#: settings.py:258
 msgid "Question"
 msgstr "質問"
 
-#: settings.py:254
+#: settings.py:258
 msgid "Reset auth-token?"
 msgstr "認証トークンをリセットしますか?"
 
-#: settings.py:274
+#: settings.py:286
 msgid "Authorization was successful"
 msgstr "認可は成功しました"
 
-#: settings.py:274
+#: settings.py:286
 msgid "Success"
 msgstr "成功"
 
-#: settings.py:289
+#: settings.py:301
 msgid "Choose a file"
 msgstr "ファイルを選択"
 
-#: settings.py:306
+#: settings.py:318
 msgid "File does not exist:"
 msgstr "ファイルが存在しません:"
 
-#: settings.py:310
+#: settings.py:322
 msgid "Both SMTP and POP are unchecked"
 msgstr "SMTPとPOPの両方がチェックされていません"
 
@@ -183,12 +183,3 @@ msgstr "クリア"
 #: monitor.py:120
 msgid "Close"
 msgstr "閉じる"
-
-#~ msgid "O2Popper Settings"
-#~ msgstr "O2Popper の設定"
-
-#~ msgid "O2Popper Monitor"
-#~ msgstr "O2Popper モニター"
-
-#~ msgid "Initialize Auth"
-#~ msgstr "認証の初期化"

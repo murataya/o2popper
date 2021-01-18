@@ -25,7 +25,7 @@ import os
 import settings
 import monitor
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 MY_APP_NAME = 'O2Popper'
 

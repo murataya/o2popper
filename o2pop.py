@@ -26,7 +26,7 @@ try:
 except ImportError:
     import client_secret_data
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 PROG = 'o2pop'
 
