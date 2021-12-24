@@ -17,6 +17,7 @@ import pickle
 import os
 import base64
 import json
+from google.auth import transport
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -26,61 +27,27 @@ try:
 except ImportError:
     import client_secret_data
 
-__version__ = '1.0.3'
+__version__ = '2.0.0'
 
 PROG = 'o2pop'
 
 LOCAL_HOST = '127.0.0.1'
-SCOPES = ['https://mail.google.com/']
 
+SCOPES = ['https://mail.google.com/']
 REMOTE_POP_HOST = 'pop.gmail.com'
 REMOTE_POP_PORT = 995
-LOCAL_POP_PORT = 8110
-
 REMOTE_SMTP_HOST = 'smtp.gmail.com'
 REMOTE_SMTP_PORT = 465
+
+REDIRECT_PORT = 8080
+
+LOCAL_POP_PORT = 8110
 LOCAL_SMTP_PORT = 8025
 
-STORE_DIR = ''
-
-CLIENT_ID = None
-CLIENT_SECRET = None
-CLIENT_CONFIG = None
-
-EMAIL = None
-IP_ADDR = None
-
-BLOCK_SMTP = None
+MS_MODE = 1
 
 def print2(label, s):
     print(f'{label} {s}')
-
-def get_token_file(user):
-    return os.path.join(STORE_DIR, 'token-' + user + '.pickle')
-
-def get_token(user):
-    token_file = get_token_file(user)
-    creds = None
-    if os.path.exists(token_file):
-        with open(token_file, 'rb') as token:
-            creds = pickle.load(token)
-            creds._client_id = CLIENT_ID
-            creds._client_secret = CLIENT_SECRET
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_config(
-                CLIENT_CONFIG, SCOPES)
-            flow.client_config['client_id'] = CLIENT_ID
-            flow.client_config['client_secret'] = CLIENT_SECRET
-            creds = flow.run_local_server()
-        with open(token_file, 'wb') as token:
-            creds._client_id = '*'
-            creds._client_secret = '*'
-            pickle.dump(creds, token)
-    return creds.token
 
 async def pop_init(local_reader, local_writer, remote_reader, remote_writer, verbose=None):
     # <<< +OK ... ready
@@ -157,7 +124,7 @@ async def pop_init(local_reader, local_writer, remote_reader, remote_writer, ver
         if verbose:
             print2("<<<", s)
         local_writer.write(s)
-        await local_writer.drain()            
+        await local_writer.drain()
         return 1
 
     s = b'+OK send PASS\r\n'
@@ -174,14 +141,33 @@ async def pop_init(local_reader, local_writer, remote_reader, remote_writer, ver
         print2(">>>", s)
 
     # AUTH
-    if args.email:
-        user = EMAIL
-    token = get_token(user.decode()).encode()
+    if params.email:
+        user = params.email
+    token = params.get_token(user.decode()).encode()
 
     auth_string = b'user=%b\1auth=Bearer %b\1\1' % (user, token)
-    s = b'AUTH XOAUTH2 %b\r\n' % base64.b64encode(auth_string)
+
+    if params.mode == MS_MODE:
+        s = b'AUTH XOAUTH2\r\n'
+        if verbose:
+            print2("!>>", s)
+        remote_writer.write(s)
+        await remote_writer.drain()
+
+        # <<< b'+ '
+        if remote_reader.at_eof():
+            return 1
+        s = await remote_reader.readline()
+        if verbose:
+            print2("<<<", s)
+        
+        s = base64.b64encode(auth_string) + b'\r\n'
+    else:
+        s = b'AUTH XOAUTH2 %b\r\n' % base64.b64encode(auth_string)
+
     if verbose:
         print2("!>>", s)
+
     remote_writer.write(s)
     await remote_writer.drain()
 
@@ -223,11 +209,11 @@ async def handle_pop(local_reader, local_writer):
             ctx.load_verify_locations(cafile=args.ca_file)
 
         if args.verbose:
-            print("Connect to " + REMOTE_POP_HOST + ":" + str(REMOTE_POP_PORT))
+            print("Connect to " + params.remote_pop_host + ":" + str(params.remote_pop_port))
 
         remote_writer = None
         remote_reader, remote_writer = await asyncio.open_connection(
-            REMOTE_POP_HOST, REMOTE_POP_PORT, ssl=ctx)
+            params.remote_pop_host, params.remote_pop_port, ssl=ctx)
 
         res = await pop_init(local_reader, local_writer, remote_reader, remote_writer, args.verbose)
         if res > 0:
@@ -278,13 +264,25 @@ def to_cc_count(data, exclude=None):
         if found:
             h.append(t)
 
-    to_cc = b''.join(h)
-    count1 = to_cc.count(b'@')
+    t = b''.join(h).translate(bytes.maketrans(b',<>\r\n', b'     '))
+    emails = []
+    for s in t.split():
+        if (b'@' in s) and (not b'"' in s) and (not b'\\' in s):
+            emails.append(s)
+
     if exclude:
-        count2 = to_cc.count(exclude)
-        return count1 - count2
-    else:
-        return count1
+        for t in exclude.replace(b',', b' ').lower().split():
+            r = []
+            if t.find(b'@') > 0 and (not t.startswith(b'.')):
+                for s in emails:
+                    if s != t:
+                        r.append(s)
+            else:
+                for s in emails:
+                    if not s.endswith(t):
+                        r.append(s)
+            emails = r
+    return len(emails)
 
 def remove_agent_header(data):
     i = 0
@@ -307,7 +305,7 @@ def remove_agent_header(data):
     while index:
         data.pop(index.pop())
 
-async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, verbose=None):
+async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, start_tls_ctx=None, verbose=None):
     # <<< 220 ... Service ready
     if remote_reader.at_eof():
         return 1
@@ -334,11 +332,11 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if verbose:
             print2("<<<", s)
         local_writer.write(s)
-        await local_writer.drain()            
+        await local_writer.drain()
         return 1
 
     if cmd.startswith(b'ehlo '):
-        s = b'EHLO [%b]\r\n' % IP_ADDR.encode()
+        s = b'EHLO [%b]\r\n' % params.ip_addr.encode()
         if verbose:
             print2("!>>", s)
         remote_writer.write(s)
@@ -352,8 +350,48 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
                 print2("<<<", s)
             local_writer.write(s)
             await local_writer.drain()
-            if s.startswith(b'250 '):
+            if s[3:4] == b' ':
                 break
+
+    if start_tls_ctx:
+        s = b'STARTTLS\r\n'
+        if verbose:
+            print2("!>>", s)
+        remote_writer.write(s)
+        await remote_writer.drain()
+
+        if remote_reader.at_eof():
+            return 1
+
+        s = await remote_reader.readline()
+        if verbose:
+            print2("<<<", s)
+
+        transport = remote_writer.transport
+        protocol = transport.get_protocol()
+        protocol._over_ssl = True
+        loop = asyncio.get_event_loop()
+
+        tls_transport = await loop.start_tls(transport, protocol, start_tls_ctx)
+        remote_writer._transport = tls_transport
+        remote_reader._transport = tls_transport
+
+        if params.mode == MS_MODE:
+            # EHLO
+            s = b'EHLO [%b]\r\n' % params.ip_addr.encode()
+            if verbose:
+                print2("!>>", s)
+            remote_writer.write(s)
+            await remote_writer.drain()
+
+            while True:
+                if remote_reader.at_eof():
+                    return 1
+                s = await remote_reader.readline()
+                if verbose:
+                    print2("<<<", s)
+                if s[3:4] == b' ':
+                    break
 
     # MAIL FROM: / AUTH PLAIN / AUTH LOGIN / QUIT
     if local_reader.at_eof():
@@ -362,7 +400,9 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
     if verbose:
        print2(">>>", s)
 
-    mail_from_buff = ''
+    mail_from_buff = b''
+    env_from = b''
+
     cmd = s.lower().rstrip()
     if cmd == b'quit':
         remote_writer.write(s)
@@ -373,14 +413,15 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if verbose:
             print2("<<<", s)
         local_writer.write(s)
-        await local_writer.drain()            
+        await local_writer.drain()
         return 1
 
     if cmd.startswith(b'mail '):
         mail_from_buff = s
-        t = s.split(b':')
+        t = s.split(b':', 1)
         if len(t) == 2:
             user = t[1].split()[0].strip(b'<>')
+            env_from = user
         else:
             user = b''
         if verbose: # debug
@@ -398,7 +439,7 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if verbose:
             print2("<<!", s)
         local_writer.write(s)
-        await local_writer.drain()            
+        await local_writer.drain()
         if local_reader.at_eof():
             return 1
         s = await local_reader.readline()
@@ -416,7 +457,7 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if verbose:
             print2("<<!", s)
         local_writer.write(s)
-        await local_writer.drain()            
+        await local_writer.drain()
         if local_reader.at_eof():
             return 1
         s = await local_reader.readline()
@@ -430,7 +471,7 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if verbose:
             print2("<<!", s)
         local_writer.write(s)
-        await local_writer.drain()            
+        await local_writer.drain()
         if local_reader.at_eof():
             return 1
         s = await local_reader.readline()
@@ -438,12 +479,13 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
             print2(">>>", s)
 
     # AUTH
-    if args.email:
-        user = EMAIL
-    token = get_token(user.decode()).encode()
+    if params.email:
+        user = params.email
+    token = params.get_token(user.decode()).encode()
 
     auth_string = b'user=%b\1auth=Bearer %b\1\1' % (user, token)
     s = b'AUTH XOAUTH2 %b\r\n' % base64.b64encode(auth_string)
+
     if verbose:
         print2("!>>", s)
     remote_writer.write(s)
@@ -456,22 +498,60 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
     s = await remote_reader.readline()
     if verbose:
         print2("<<<", s)
-    
-    if not s.startswith(b'235'):
-        s = b'535 Authentication failed\r\n'
-        if verbose:
-            print2("<<!", s)
-        local_writer.write(s)
-        await local_writer.drain()
 
+    parent = params.parent
+    err = False
+
+    if s.startswith(b'235'):
+        # MAIL FROM:
         if mail_from_buff:
-            return 1
+            s = mail_from_buff
+            if parent.change_env_from: # Change Envelope-From
+                env_from = user
+                t = s.split(b':', 1)
+                if len(t) == 2:
+                    t1 = t[1].split(b' ', 1)
+                    if len(t1) == 2:
+                        s = b'MAIL FROM:<' + user + b'> ' + t1[1]
+                    else:
+                        s = b'MAIL FROM:<' + user + b'>\r\n'
+            if verbose:
+                print2("!>>", s)
+            remote_writer.write(s)
+            await remote_writer.drain()
 
-        if local_reader.at_eof():
-            return 1
-        s = await local_reader.readline()
-        if verbose:
-            print2(">>>", s)
+            while True:
+                if remote_reader.at_eof():
+                    return 1
+                s = await remote_reader.readline()
+                if verbose:
+                    print2("<<<", s)
+                local_writer.write(s)
+                await local_writer.drain()
+                if s[3:4] == b' ':
+                    break
+
+            if not s.startswith(b'250'):
+                err = True
+        else:
+            local_writer.write(s)
+            await local_writer.drain()
+    else:
+        if s.startswith(b'334'):
+            s = b'\r\n'
+            if verbose:
+                print2("!>>", s)
+            remote_writer.write(s)
+            await remote_writer.drain()
+
+            while True:
+                if remote_reader.at_eof():
+                    return 1
+                s = await remote_reader.readline()
+                if verbose:
+                    print2("<<<", s)
+                if s[3:4] == b' ':
+                    break
 
         s = b'535 Authentication failed\r\n'
         if verbose:
@@ -479,13 +559,13 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         local_writer.write(s)
         await local_writer.drain()
 
-        return 1
+        err = True
 
-    # MAIL FROM:
-    if mail_from_buff:
+    if err:
+        s = b'QUIT\r\n'
         if verbose:
-            print2("!>>", mail_from_buff)
-        remote_writer.write(mail_from_buff)
+            print2("!>>", s)
+        remote_writer.write(s)
         await remote_writer.drain()
         if remote_reader.at_eof():
             return 1
@@ -493,13 +573,17 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if verbose:
             print2("<<<", s)
 
-    local_writer.write(s)
-    await local_writer.drain()
+        return 1
 
-    if not BLOCK_SMTP:
+    if not params.parent:
         return 0
 
-    # RCPT TO: / DATA
+    block_smtp = parent.block_smtp
+    block_list_parsed = parent.block_list_parsed
+
+    rcpt_count = 0
+
+    # MAIL FROM: / RCPT TO: / DATA
     while True:
         if local_reader.at_eof():
             return 1
@@ -511,6 +595,76 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if cmd == b'data':
             break
 
+        mail_or_rcpt = False
+        if cmd.startswith(b'mail '):
+            mail_or_rcpt = True
+            t = s.split(b':', 1)
+            if len(t) == 2:
+                if parent.change_env_from: # Change Envelope-From
+                    env_from = user
+                    t1 = t[1].split(b' ', 1)
+                    if len(t1) == 2:
+                        s = b'MAIL FROM:<' + user + b'> ' + t1[1]
+                    else:
+                        s = b'MAIL FROM:<' + user + b'>\r\n'
+                    if verbose:
+                        print2("!>>", s)
+                else:
+                    env_from = t[1].split()[0].strip(b'<>')
+        elif cmd.startswith(b'rcpt '):
+            mail_or_rcpt = True
+            rcpt_count += 1
+            if block_list_parsed: # Check block list
+                t = cmd.split(b':', 1)
+                if len(t) == 2:
+                    email = t[1].split()[0].strip(b'<>')
+                else:
+                    email = b''
+
+                matched = False
+                for t, is_email in block_list_parsed:
+                    if is_email:
+                        if t == email:
+                            matched = True
+                            break
+                    else:
+                        if email.endswith(t):
+                            matched = True
+                            break
+                if matched:
+                    err = True
+                    s = b'452 Matched block list\r\n'
+                    if verbose:
+                        print2("<<!", s)
+                    local_writer.write(s)
+                    await local_writer.drain()
+                    break
+
+        remote_writer.write(s)
+        await remote_writer.drain()
+
+        while True:
+            if remote_reader.at_eof():
+                return 1
+            s = await remote_reader.readline()
+            if verbose:
+                print2("<<<", s)
+            local_writer.write(s)
+            await local_writer.drain()
+            if s[3:4] == b' ':
+                break
+
+        if mail_or_rcpt:
+            if not s.startswith(b'250'):
+                err = True
+                break
+        else:
+            return 1
+
+    if err:
+        s = b'QUIT\r\n'
+        if verbose:
+            print2("!>>", s)
         remote_writer.write(s)
         await remote_writer.drain()
         if remote_reader.at_eof():
@@ -518,21 +672,13 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         s = await remote_reader.readline()
         if verbose:
             print2("<<<", s)
-
-        local_writer.write(s)
-        await local_writer.drain()
-
-        if cmd.startswith(b'rcpt ') or cmd.startswith(b'mail '):
-            if not s.startswith(b'250'):
-                return 1
-        else:
-            return 1
+        return 1
 
     s = b'354 Start mail input; end with <CRLF>.<CRLF>\r\n'
     if verbose:
         print2("<<!", s)
     local_writer.write(s)
-    await local_writer.drain()            
+    await local_writer.drain()
 
     data = []
     while True:
@@ -545,21 +691,19 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if s == b'.\r\n':
             break
 
-    block_smtp = BLOCK_SMTP
-    parent = block_smtp.parent
     to_cc_max = parent.to_cc_max
     to_cc_exclude = parent.to_cc_exclude.encode()
     err = False
     if to_cc_max > 0:
-        if to_cc_exclude:
-            count = to_cc_count(data, to_cc_exclude)
-        else:
-            count = to_cc_count(data)
+        count = to_cc_count(data, to_cc_exclude)
         if count > to_cc_max:
             err = True
             s = b'452 Too many addresses in To and Cc fields\r\n'
 
     if not err and parent.send_delay > 0:
+        parent.rcpt_count = rcpt_count
+        parent.env_from = env_from.decode()
+
         block_smtp.cancel = False
         block_smtp.run()
 
@@ -578,7 +722,7 @@ async def smtp_init(local_reader, local_writer, remote_reader, remote_writer, ve
         if verbose:
             print2("<<!", s)
         local_writer.write(s)
-        await local_writer.drain()            
+        await local_writer.drain()
 
         s = b'QUIT\r\n'
         if verbose:
@@ -652,15 +796,21 @@ async def handle_smtp(local_reader, local_writer):
         ctx = ssl.create_default_context()
         if args.ca_file:
             ctx.load_verify_locations(cafile=args.ca_file)
+        
+        if params.remote_smtp_port == 587:
+            start_tls_ctx = ctx
+            ctx = None
+        else:
+            start_tls_ctx = None
 
         if args.verbose:
-            print("Connect to " + REMOTE_SMTP_HOST + ":" + str(REMOTE_SMTP_PORT))
+            print("Connect to " + params.remote_smtp_host + ":" + str(params.remote_smtp_port))
 
         remote_writer = None
         remote_reader, remote_writer = await asyncio.open_connection(
-            REMOTE_SMTP_HOST, REMOTE_SMTP_PORT, ssl=ctx)
+            params.remote_smtp_host, params.remote_smtp_port, ssl=ctx)
 
-        res = await smtp_init(local_reader, local_writer, remote_reader, remote_writer, args.verbose)
+        res = await smtp_init(local_reader, local_writer, remote_reader, remote_writer, start_tls_ctx=start_tls_ctx, verbose=args.verbose)
         if res > 0:
             return
 
@@ -700,7 +850,7 @@ async def main(parent=None):
         pop_server = start_server(handle_pop, LOCAL_HOST, args.pop_port, 'pop')
     if not args.no_smtp:
         if args.verbose:
-            print('local ip:', IP_ADDR)
+            print('local ip:', params.ip_addr)
         smtp_server = start_server(handle_smtp, LOCAL_HOST, args.smtp_port, 'smtp')
     
     if parent is None:
@@ -729,24 +879,124 @@ async def main(parent=None):
 def task_cancel(loop, task):
     loop.call_soon_threadsafe(task.cancel)
 
-def load_client_secret_file(path):
-    if path:
-        with open(path, 'r') as f:
-            return json.load(f)
-    else:
-        return json.loads(base64.b64decode(client_secret_data.CLIENT_SECRET_DATA))
-
-def get_id_secret(config):
-    client_id = config['installed']['client_id']
-    client_secret = config['installed']['client_secret'] 
-    return (client_id, client_secret)
-
 def run_main(coro):
     if args.verbose: # debug
         print('=== Start ===')
     asyncio.run(coro)
     if args.verbose: # debug
         print('=== Stop ===')
+
+def parse_hostport(s, default_port=None):
+    r = s.rsplit(":", 1)
+    if len(r) == 1:
+        port = default_port
+    else:
+        try:
+            port = int(r[1])
+        except ValueError:
+            port = default_port
+    return (r[0], port)
+
+class Params:
+    def __init__(self, path=None):
+        self.parent = None
+        self.store_dir = ''
+        self.email = None
+        self.ip_addr = None
+        self.mode = None
+        self.path = path
+        self.reset()
+
+    def reset(self, parent=None):
+        if self.path:
+            with open(self.path, 'r') as f:
+                self.client_config = json.load(f)
+        else:
+            self.client_config = json.loads(base64.b64decode(client_secret_data.CLIENT_SECRET_DATA))
+
+        config = self.client_config['installed']
+
+        if parent and parent.client_id:
+            self.client_id = config['client_id'] = parent.client_id
+        else:
+            self.client_id = config['client_id']
+        
+        if parent and parent.client_secret:
+            self.client_secret = config['client_secret'] = parent.client_secret
+        else:
+            self.client_secret = config['client_secret']
+
+        if '_scopes' in config:
+            self.scopes = config['_scopes']
+            if len(self.scopes) > 1:
+                os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+                if self.scopes[1].startswith('https://outlook.office.com/'):
+                    self.mode = MS_MODE
+        else:
+            self.scopes = SCOPES
+
+        if '_pop_server' in config:
+            self.remote_pop_host, self.remote_pop_port = parse_hostport(
+                config['_pop_server'], REMOTE_POP_PORT)
+        else:
+            self.remote_pop_host, self.remote_pop_port = REMOTE_POP_HOST, REMOTE_POP_PORT
+
+        if '_smtp_server' in config:
+            self.remote_smtp_host, self.remote_smtp_port = parse_hostport(
+                config['_smtp_server'], REMOTE_SMTP_PORT)
+        else:
+            self.remote_smtp_host, self.remote_smtp_port = REMOTE_SMTP_HOST, REMOTE_SMTP_PORT
+        
+        if '_redirect_port' in config:
+            self.redirect_port = config['_redirect_port']
+        else:
+            self.redirect_port = REDIRECT_PORT
+
+    def get_token_file(self, user):
+        return os.path.join(self.store_dir, 'token-' + user + '.pickle')
+
+    def get_token(self, user, login_hint=None):
+        token_file = self.get_token_file(user)
+        creds = None
+        if os.path.exists(token_file):
+            with open(token_file, 'rb') as token:
+                creds = pickle.load(token)
+                creds._client_id = self.client_id
+                creds._client_secret = self.client_secret
+
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_config(
+                    self.client_config, self.scopes)
+                kwargs = {}
+                if login_hint or (self.parent and self.parent.login_hint):
+                    kwargs['login_hint'] = user
+                if self.redirect_port != REDIRECT_PORT:
+                    kwargs['port'] = self.redirect_port
+                creds = flow.run_local_server(**kwargs)
+            with open(token_file, 'wb') as token:
+                creds._client_id = '*'
+                creds._client_secret = '*'
+                if self.mode == MS_MODE:
+                    if 'offline_access' in creds._scopes:
+                        creds._scopes.remove('offline_access')
+                pickle.dump(creds, token)
+        return creds.token
+
+    def info(self):
+        config = self.client_config['installed']
+        s = (
+            f"_scopes: {self.scopes}\n"
+            f"_pop_server: {self.remote_pop_host}:{self.remote_pop_port}\n"
+            f"_smtp_server: {self.remote_smtp_host}:{self.remote_smtp_port}\n"
+            f"_redirect_port: {self.redirect_port}\n"
+            "\n"
+            f"auth_uri: {config['auth_uri']}\n"
+            f"token_uri: {config['token_uri']}"
+        )
+        return s
 
 parser = argparse.ArgumentParser(prog=PROG)
 parser.add_argument("--version", help="show version and exit",
@@ -764,17 +1014,15 @@ parser.add_argument("--ca_file", help="CA file")
 parser.add_argument("-f", "--client_secret_file", help="client secret file")
 
 args = parser.parse_args()
+params = Params(args.client_secret_file)
 
 if args.email:
-    EMAIL = args.email.encode()
+    params.email = args.email.encode()
     if args.verbose:
         print("email:", args.email)
 
 if not args.no_smtp:
-    IP_ADDR = get_ip()
-
-CLIENT_CONFIG = load_client_secret_file(args.client_secret_file)
-CLIENT_ID, CLIENT_SECRET = get_id_secret(CLIENT_CONFIG)
+    params.ip_addr = get_ip()
 
 if __name__ == '__main__':
     if args.version:

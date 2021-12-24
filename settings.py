@@ -26,163 +26,233 @@ class Settings(wx.Dialog):
 
         main_sizer = wx.BoxSizer(wx.VERTICAL)
 
+        notebook = wx.Notebook(self)
+        panel1 = wx.Panel(notebook)
+        panel2 = wx.Panel(notebook)
+        panel3 = wx.Panel(notebook)
+
+        main_sizer.Add(notebook, proportion=1, flag=wx.EXPAND|wx.LEFT|wx.TOP|wx.RIGHT, border=8)
+
         # ----------------------------------------------------------
 
-        sbox1 = wx.StaticBox(self, label=_("Authorization"))
-        sizer1 = wx.StaticBoxSizer(sbox1, wx.VERTICAL)
+        panel1_sizer = wx.BoxSizer(wx.VERTICAL)
 
-        text11 = wx.StaticText(self, label=_("Your email:"))
-        sizer1.Add(text11, flag=wx.LEFT|wx.TOP, border=5)
+        text11 = wx.StaticText(panel1, label=_("Your email:"))
+        panel1_sizer.Add(text11, flag=wx.LEFT|wx.TOP, border=10)
 
         hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-        self.tc_email = wx.TextCtrl(self)
-
+        self.tc_email = wx.TextCtrl(panel1)
         self.tc_email.SetMinSize((250, -1))
+        self.tc_email.SetToolTip(_("Please don't input group-address!"))
 
         hbox1.Add(self.tc_email, proportion=1)
         self.tc_email.Bind(wx.EVT_TEXT, self.on_text)
 
-        self.button_auth = wx.Button(self, label=_("Auth..."))
+        self.button_auth = wx.Button(panel1, label=_("Auth..."))
         hbox1.Add(self.button_auth, flag=wx.LEFT, border=5)
         self.button_auth.Bind(wx.EVT_BUTTON, self.on_auth)
 
-        sizer1.Add(hbox1, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=5)
+        panel1_sizer.Add(hbox1, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=10)
 
-        text12_note = wx.StaticText(self, label=_("Please don't input group-address!"))
-        font1 = text12_note.GetFont()
-        font1.PointSize -= 1
-        text12_note.SetFont(font1)
-        text12_note.SetForegroundColour('#cc33cc')
-        sizer1.Add(text12_note, flag=wx.LEFT, border=10)
-        sizer1.Add((-1, 5))
+        # Remove Header
 
-        main_sizer.Add(sizer1, flag=wx.EXPAND|wx.ALL, border=10)
+        self.checkbox_login_hint = wx.CheckBox(panel1, label=_("Send login_hint"))
+
+        panel1_sizer.Add((-1, 5))
+        panel1_sizer.Add(self.checkbox_login_hint, flag=wx.ALIGN_RIGHT|wx.RIGHT, border=85)
 
         # ----------------------------------------------------------
 
-        sbox2 = wx.StaticBox(self, label=_("Secret File"))
-        sizer2 = wx.StaticBoxSizer(sbox2, wx.VERTICAL)
+        text13 = wx.StaticText(panel1, label=_("Secret File:"))
+        panel1_sizer.Add(text13, flag=wx.LEFT|wx.TOP, border=10)
+        panel1_sizer.Add((-1, 5))
 
-        self.radio_built_in = wx.RadioButton(self, label=_("Built-in"), style=wx.RB_GROUP)
+        self.radio_built_in = wx.RadioButton(panel1, label=_("Built-in"), style=wx.RB_GROUP)
 
-        sizer2.Add(self.radio_built_in, flag=wx.TOP|wx.LEFT , border=5)
+        panel1_sizer.Add(self.radio_built_in, flag=wx.LEFT, border=10)
         self.radio_built_in.Bind(wx.EVT_RADIOBUTTON, self.on_built_in)
 
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-        self.radio_choose = wx.RadioButton(self)
+        self.radio_choose = wx.RadioButton(panel1)
         hbox2.Add(self.radio_choose)
         self.radio_choose.Bind(wx.EVT_RADIOBUTTON, self.on_choose)
 
-        self.tc_path = wx.TextCtrl(self)
+        self.tc_path = wx.TextCtrl(panel1)
 
         hbox2.Add(self.tc_path, proportion=1)
-        self.button_browse = wx.Button(self, label=_("Browse..."))
+        self.button_browse = wx.Button(panel1, label=_("Browse..."))
         hbox2.Add(self.button_browse, flag=wx.LEFT, border=5)
         self.button_browse.Bind(wx.EVT_BUTTON, self.on_browse)
 
-        sizer2.Add(hbox2, flag=wx.EXPAND|wx.ALL, border=5)
-
-        main_sizer.Add(sizer2, flag=wx.EXPAND|wx.ALL, border=10)
+        panel1_sizer.Add((-1, 5))
+        panel1_sizer.Add(hbox2, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=10)
 
         # ----------------------------------------------------------
 
-        sbox3 = wx.StaticBox(self, label=_("Listen"))
-        sizer3 = wx.StaticBoxSizer(sbox3, wx.VERTICAL)
+        cp = wx.CollapsiblePane(panel1, label=_("Details"), style=wx.CP_DEFAULT_STYLE)
+        cpane = cp.GetPane()
+        cpane_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        text14 = wx.StaticText(cpane, label=_("Client ID:"))
+        cpane_sizer.Add(text14)
+
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.tc_client_id = wx.TextCtrl(cpane)
+        self.tc_client_id.Enable(False)
+
+        hbox1.Add(self.tc_client_id, proportion=1)
+
+        self.button_edit1 = wx.Button(cpane, label=_("Edit"))
+        hbox1.Add(self.button_edit1, flag=wx.LEFT, border=5)
+        self.button_edit1.Bind(wx.EVT_BUTTON, self.on_button_edit1)
+
+        cpane_sizer.Add(hbox1, flag=wx.EXPAND)
+
+        text15 = wx.StaticText(cpane, label=_("Client Secret:"))
+
+        cpane_sizer.Add(text15, flag=wx.TOP, border=10)
+
+        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        self.tc_client_secret = wx.TextCtrl(cpane)
+        self.tc_client_secret.Enable(False)
+
+        hbox1.Add(self.tc_client_secret, proportion=1)
+
+        self.button_edit2 = wx.Button(cpane, label=_("Edit"))
+        hbox1.Add(self.button_edit2, flag=wx.LEFT, border=5)
+        self.button_edit2.Bind(wx.EVT_BUTTON, self.on_button_edit2)
+
+        cpane_sizer.Add(hbox1, flag=wx.EXPAND)
+
+        text16 = wx.StaticText(cpane, label=_("Parameters:"))
+        cpane_sizer.Add(text16, flag=wx.TOP, border=10)
+
+        self.params = wx.TextCtrl(cpane, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_DONTWRAP)
+        self.params.SetMinSize((-1, 18*3 + 14))
+
+        cpane_sizer.Add(self.params, proportion=1, flag=wx.EXPAND)
+        cpane.SetSizer(cpane_sizer)
+
+        panel1_sizer.Add(cp, proportion=1, flag=wx.EXPAND|wx.ALL, border=10)
+        panel1.SetSizer(panel1_sizer)
+
+        self.params.SetBackgroundColour(wx.Colour(240, 240, 240))
+
+        # ----------------------------------------------------------
+
+        panel2_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # SMTP
 
         hbox31 = wx.BoxSizer(wx.HORIZONTAL)
-        self.checkbox_smtp = wx.CheckBox(self, label=_("SMTP"), size=(-1, -1))
+        self.checkbox_smtp = wx.CheckBox(panel2, label=_("SMTP"))
 
         size_smtp = self.checkbox_smtp.GetSize()
 
         hbox31.Add(self.checkbox_smtp)
-        text31 = wx.StaticText(self, label=_("Port"))
+        text31 = wx.StaticText(panel2, label=_("Port"))
         hbox31.Add(text31, flag=wx.LEFT, border=10)
-        self.ic_smtp = wx.lib.intctrl.IntCtrl(self, style=wx.TE_RIGHT)
+        self.ic_smtp = wx.lib.intctrl.IntCtrl(panel2, style=wx.TE_RIGHT)
         self.ic_smtp.SetMaxLength(8)
         self.ic_smtp.SetMaxSize((64,-1))
 
         hbox31.Add(self.ic_smtp, flag=wx.LEFT, border=5)
-        sizer3.Add(hbox31, flag=wx.EXPAND|wx.ALL, border=5)
+        panel2_sizer.Add(hbox31, flag=wx.EXPAND|wx.LEFT|wx.TOP, border=10)
 
         # POP
 
         hbox32 = wx.BoxSizer(wx.HORIZONTAL)
-        self.checkbox_pop = wx.CheckBox(self, label=_("POP"), size=size_smtp)
+        self.checkbox_pop = wx.CheckBox(panel2, label=_("POP"), size=size_smtp)
 
         hbox32.Add(self.checkbox_pop)
-        text32 = wx.StaticText(self, label=_("Port"))
+        text32 = wx.StaticText(panel2, label=_("Port"))
         hbox32.Add(text32, flag=wx.LEFT, border=10)
-        self.ic_pop = wx.lib.intctrl.IntCtrl(self, style=wx.TE_RIGHT)
+        self.ic_pop = wx.lib.intctrl.IntCtrl(panel2, style=wx.TE_RIGHT)
         self.ic_pop.SetMaxLength(8)
         self.ic_pop.SetMaxSize((64,-1))
 
         hbox32.Add(self.ic_pop, flag=wx.LEFT, border=5)
-        sizer3.Add(hbox32, flag=wx.EXPAND|wx.ALL, border=5)
+        panel2_sizer.Add(hbox32, flag=wx.EXPAND|wx.LEFT|wx.TOP, border=10)
 
         # Initial State
 
-        text33 = wx.StaticText(self, label=_("Initial State:"))
-        sizer3.Add(text33, flag=wx.LEFT|wx.TOP, border=5)
+        text33 = wx.StaticText(panel2, label=_("Initial State:"))
+        panel2_sizer.Add(text33, flag=wx.LEFT|wx.TOP, border=10)
 
         hbox33 = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.radio_start = wx.RadioButton(self, label=_("Start"), style=wx.RB_GROUP)
-        hbox33.Add(self.radio_start, flag=wx.LEFT, border=50)
+        self.radio_start = wx.RadioButton(panel2, label=_("Start"), style=wx.RB_GROUP)
+        hbox33.Add(self.radio_start, flag=wx.LEFT, border=55)
 
-        self.radio_stop = wx.RadioButton(self, label=_("Stop"))
+        self.radio_stop = wx.RadioButton(panel2, label=_("Stop"))
         hbox33.Add(self.radio_stop, flag=wx.LEFT, border=5)
 
-        sizer3.Add(hbox33, flag=wx.TOP|wx.BOTTOM, border=5)
+        panel2_sizer.Add(hbox33, flag=wx.TOP, border=5)
 
-        main_sizer.Add(sizer3, flag=wx.ALL, border=10)
+        panel2.SetSizer(panel2_sizer)
 
         # ----------------------------------------------------------
 
-        sbox4 = wx.StaticBox(self, label=_("Block SMTP"))
-        sizer4 = wx.StaticBoxSizer(sbox4, wx.VERTICAL)
+        panel3_sizer = wx.BoxSizer(wx.VERTICAL)
 
         # To+Cc Max
 
         hbox41 = wx.BoxSizer(wx.HORIZONTAL)
-        text41 = wx.StaticText(self, label=_("To+Cc Max"))
+        text41 = wx.StaticText(panel3, label=_("To+Cc Max"))
         hbox41.Add(text41, flag=wx.LEFT)
 
-        self.to_cc_max = wx.SpinCtrl(self)
+        self.to_cc_max = wx.SpinCtrl(panel3)
         self.to_cc_max.SetRange(0,100)
 
         hbox41.Add(self.to_cc_max, flag=wx.LEFT, border=5)
 
-        text42 = wx.StaticText(self, label=_("Exclude"))
+        text42 = wx.StaticText(panel3, label=_("Exclude"))
         hbox41.Add(text42, flag=wx.LEFT, border=10)
-        self.to_cc_exclude = wx.TextCtrl(self)
+        self.to_cc_exclude = wx.TextCtrl(panel3)
         hbox41.Add(self.to_cc_exclude, flag=wx.LEFT, border=5, proportion=1)
 
-        sizer4.Add(hbox41, flag=wx.EXPAND|wx.ALL, border=5)
+        panel3_sizer.Add(hbox41, flag=wx.EXPAND|wx.ALL, border=10)
+
+        hbox43 = wx.BoxSizer(wx.HORIZONTAL)
+        text43a = wx.StaticText(panel3, label=_("Send Delay"))
+        hbox43.Add(text43a, flag=wx.LEFT)
+
+        self.send_delay = wx.SpinCtrl(panel3)
+        self.send_delay.SetRange(0,30)
+
+        hbox43.Add(self.send_delay, flag=wx.LEFT, border=5)
+        text43b = wx.StaticText(panel3, label=_("sec"))
+        hbox43.Add(text43b, flag=wx.LEFT, border=5)
+
+        panel3_sizer.Add(hbox43, flag=wx.LEFT|wx.BOTTOM, border=10)
 
         # Remove Header
 
-        self.checkbox_remove_header = wx.CheckBox(self, label=_("Remove X-Mailer/User-Agent header"), size=(-1, -1))
-        sizer4.Add(self.checkbox_remove_header, flag=wx.LEFT|wx.TOP|wx.BOTTOM, border=5)
+        self.checkbox_remove_header = wx.CheckBox(panel3, label=_("Remove X-Mailer/User-Agent header"))
 
-        # Send Delay
+        panel3_sizer.Add(self.checkbox_remove_header, flag=wx.LEFT|wx.BOTTOM, border=10)
 
-        hbox44 = wx.BoxSizer(wx.HORIZONTAL)
-        text44a = wx.StaticText(self, label=_("Send Delay"))
-        hbox44.Add(text44a, flag=wx.LEFT)
+        # Change Envelope-From
 
-        self.send_delay = wx.SpinCtrl(self)
-        self.send_delay.SetRange(0,30)
+        self.checkbox_change_env_from = wx.CheckBox(panel3, label=_("Change Envelope-From"))
 
-        hbox44.Add(self.send_delay, flag=wx.LEFT, border=5)
-        text44b = wx.StaticText(self, label=_("sec"))
-        hbox44.Add(text44b, flag=wx.LEFT, border=5)
-        sizer4.Add(hbox44, flag=wx.LEFT|wx.TOP|wx.BOTTOM, border=5)
+        panel3_sizer.Add(self.checkbox_change_env_from, flag=wx.LEFT|wx.BOTTOM, border=10)
 
-        main_sizer.Add(sizer4, flag=wx.EXPAND|wx.ALL, border=10)
+        # Block list
+
+        text44 = wx.StaticText(panel3, label=_("Block list:"))
+        panel3_sizer.Add(text44, flag=wx.LEFT, border=10)
+
+        self.block_list = wx.TextCtrl(panel3, style=wx.TE_MULTILINE)
+        panel3_sizer.Add(self.block_list, proportion=1, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
+
+        panel3.SetSizer(panel3_sizer)
 
         # ----------------------------------------------------------
+
+        notebook.AddPage(panel1, _("OAuth2"))
+        notebook.AddPage(panel2, _("Listen"))
+        notebook.AddPage(panel3, _("Block SMTP"))
 
         # OK / Cancel
 
@@ -200,8 +270,7 @@ class Settings(wx.Dialog):
             hbox9.Add(button_cancel, flag=wx.LEFT, border=5)
             hbox9.Add(self.button_ok, flag=wx.LEFT|wx.RIGHT, border=5)
 
-
-        main_sizer.Add(hbox9, flag=wx.ALL|wx.ALIGN_RIGHT, border=10)
+        main_sizer.Add(hbox9, flag=wx.ALL|wx.ALIGN_RIGHT, border=8)
 
         # ----------------------------------------------------------
 
@@ -211,6 +280,7 @@ class Settings(wx.Dialog):
         # ----------------------------------------------------------
 
         self.tc_email.SetValue(parent.email)
+        self.checkbox_login_hint.SetValue(parent.login_hint)
 
         if parent.built_in:
             self.radio_built_in.SetValue(True)
@@ -220,6 +290,13 @@ class Settings(wx.Dialog):
         else:
             self.radio_choose.SetValue(True)
         self.tc_path.SetValue(parent.path)
+
+        if parent.client_id:
+            self.tc_client_id.SetValue('*' * len(parent.client_id))
+        if parent.client_secret:
+            self.tc_client_secret.SetValue('*' * len(parent.client_secret))
+
+        self.params.SetValue(parent.params_info)
 
         self.checkbox_smtp.SetValue(parent.smtp)
         self.ic_smtp.SetValue(parent.smtp_port)
@@ -233,8 +310,12 @@ class Settings(wx.Dialog):
 
         self.to_cc_max.SetValue(parent.to_cc_max)
         self.to_cc_exclude.SetValue(parent.to_cc_exclude)
-        self.checkbox_remove_header.SetValue(parent.remove_header)
         self.send_delay.SetValue(parent.send_delay)
+        self.checkbox_remove_header.SetValue(parent.remove_header)
+        self.checkbox_change_env_from.SetValue(parent.change_env_from)
+        self.block_list.SetValue(parent.block_list)
+
+        self.tc_path.Bind(wx.EVT_TEXT, self.on_path)
 
     def on_text(self, e):
         email = self.tc_email.GetValue()
@@ -248,12 +329,15 @@ class Settings(wx.Dialog):
         if not '@' in email or '\\' in email or '/' in email:
             wx.MessageBox(_("Invalid email"), caption=_("Error"), style=wx.ICON_ERROR)
             return
-        
+        if self.checkbox_login_hint.GetValue():
+            login_hint = True
+        else:
+            login_hint = None
         store_dir = self.parent.store_dir
         if not os.path.exists(store_dir):
             os.makedirs(store_dir)
 
-        token_file = self.parent.get_token_file(email)
+        token_file = self.parent.params.get_token_file(email)
         if os.path.exists(token_file):
             dlg = wx.MessageDialog(None, _("Reset auth-token?"), caption=_("Question"), style=wx.YES_NO|wx.NO_DEFAULT|wx.ICON_WARNING)
             result = dlg.ShowModal()
@@ -268,7 +352,7 @@ class Settings(wx.Dialog):
         error_msg = ''
         auth_ok = True
         try:
-            self.parent.get_token(email)
+            self.parent.params.get_token(email, login_hint)
         except Exception as e:
             error_name = e.__class__.__name__
             auth_ok = False
@@ -292,16 +376,35 @@ class Settings(wx.Dialog):
             self.tc_path.Enable(False)
         self.tc_path.SetModified(False)
         self.button_browse.Enable(False)
+        self.button_auth.Enable(False)
      
     def on_choose(self, e):
         self.tc_path.Enable()
         self.button_browse.Enable()
+        self.button_auth.Enable(False)
     
     def on_browse(self, e):
         dlg = wx.FileDialog(self, _("Choose a file"), wildcard="JS files (*.js)|*.js|All files (*.*)|*.*", style=wx.FD_OPEN)
         if dlg.ShowModal() == wx.ID_OK:
             self.tc_path.SetValue(dlg.GetPath())
         dlg.Destroy()
+
+    def on_path(self, e):
+        self.button_auth.Enable(False)
+
+    def on_button_edit1(self, e):
+        self.tc_client_id.Enable()
+        self.button_edit1.Enable(False)
+        if self.parent.client_id:
+            self.tc_client_id.SetValue(self.parent.client_id)
+        self.tc_client_id.SetFocus()
+
+    def on_button_edit2(self, e):
+        self.tc_client_secret.Enable()
+        self.button_edit2.Enable(False)
+        if self.parent.client_secret:
+            self.tc_client_secret.SetValue(self.parent.client_secret)
+        self.tc_client_secret.SetFocus()
 
     def on_ok(self, e):
         email = self.tc_email.GetValue()
@@ -311,7 +414,6 @@ class Settings(wx.Dialog):
                 return
 
         built_in = self.radio_built_in.GetValue()
-
         if not built_in:
             path = self.tc_path.GetValue()
             if not os.path.exists(path):
@@ -323,8 +425,15 @@ class Settings(wx.Dialog):
             return
 
         self.parent.email = email
+        self.parent.login_hint = self.checkbox_login_hint.GetValue()
         self.parent.built_in = built_in
         self.parent.path = self.tc_path.GetValue()
+
+        if self.tc_client_id.IsEnabled():
+            self.parent.client_id = self.tc_client_id.GetValue()
+        if self.tc_client_secret.IsEnabled():
+            self.parent.client_secret = self.tc_client_secret.GetValue()
+
         self.parent.smtp = self.checkbox_smtp.GetValue()
         self.parent.smtp_port = self.ic_smtp.GetValue()
         self.parent.pop = self.checkbox_pop.GetValue()
@@ -333,7 +442,9 @@ class Settings(wx.Dialog):
 
         self.parent.to_cc_max = self.to_cc_max.GetValue()
         self.parent.to_cc_exclude = self.to_cc_exclude.GetValue()
-        self.parent.remove_header = self.checkbox_remove_header.GetValue()
         self.parent.send_delay = self.send_delay.GetValue()
+        self.parent.remove_header = self.checkbox_remove_header.GetValue()
+        self.parent.change_env_from = self.checkbox_change_env_from.GetValue()
+        self.parent.block_list = self.block_list.GetValue()
 
         self.EndModal(wx.ID_OK)

@@ -14,7 +14,7 @@ import threading
 import builtins
 builtins.__dict__['_'] = wx.GetTranslation
 
-class WriteText(object):
+class WriteText:
     def __init__(self, logger):
         self.logger = logger
         self.buff = []

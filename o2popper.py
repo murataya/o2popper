@@ -25,14 +25,16 @@ import os
 import settings
 import monitor
 
-__version__ = '1.0.3'
+__version__ = '2.0.0'
 
 MY_APP_NAME = 'O2Popper'
 
 import builtins
 builtins.__dict__['_'] = wx.GetTranslation
 
-class BlockSmtp(object):
+DEFAULT_BLOCK_LIST = '@gmai.com'
+
+class BlockSmtp:
     def __init__(self, parent):
         self.parent = parent
         self.cancel = False
@@ -60,11 +62,36 @@ class SendingDialog(wx.Dialog):
         self.delay = parent.send_delay
 
         self.gauge = wx.Gauge(self, range=self.delay, style=wx.GA_HORIZONTAL|wx.GA_PROGRESS)
-        main_sizer.Add(self.gauge, flag=wx.EXPAND|wx.ALL, border=15)
+        main_sizer.Add((-1, 5))
+        main_sizer.Add(self.gauge, flag=wx.EXPAND|wx.LEFT|wx.RIGHT, border=15)
 
         self.Bind(wx.EVT_TIMER, self.on_timer)
         self.timer = wx.Timer(self)
         self.timer.Start(1000)
+
+        # -----------------------------------------------------------------
+
+        hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+
+        text21 = wx.StaticText(self, label=_("Envelope-From:"), style=wx.ALIGN_RIGHT)
+        hbox2.Add(text21)
+        s = parent.env_from
+        text22 = wx.StaticText(self, label=s)
+        text22.SetForegroundColour('#0033ff')
+        hbox2.Add(text22, flag=wx.LEFT, border=5)
+
+        main_sizer.Add((-1, 5))
+        main_sizer.Add(hbox2, flag=wx.LEFT|wx.RIGHT, border=15)
+
+        hbox3 = wx.BoxSizer(wx.HORIZONTAL)
+        text31 = wx.StaticText(self, label=_("To+Cc+Bcc:"), size=text21.GetSize(), style=wx.ALIGN_RIGHT)
+        hbox3.Add(text31)
+        s = str(parent.rcpt_count)
+        text32 = wx.StaticText(self, label=s)
+        text32.SetForegroundColour('#0033ff')
+        hbox3.Add(text32, flag=wx.LEFT, border=5)
+
+        main_sizer.Add(hbox3, flag=wx.LEFT|wx.RIGHT, border=15)
 
         # -----------------------------------------------------------------
 
@@ -101,6 +128,18 @@ def get_datadir():
     else:
         return ''
 
+def parse_block_list(block_list):
+    if not block_list:
+        return None
+
+    r = []
+    for t in block_list.encode().translate(bytes.maketrans(b',\r\n', b'   ')).lower().split():
+        if t.find(b'@') > 0 and (not t.startswith(b'.')):
+            r.append((t, True))
+        else:
+            r.append((t, False))
+    return r
+
 class MainMenu(wx.adv.TaskBarIcon):
     def __init__(self, frame):
         self.frame = frame
@@ -117,9 +156,14 @@ class MainMenu(wx.adv.TaskBarIcon):
             self.pf_windows = True
         else:
             self.pf_windows = False
-                
-        self.store_dir = os.path.join(get_datadir(), MY_APP_NAME)
-        o2pop.STORE_DIR = self.store_dir
+
+        self.rcpt_count = 0
+        self.env_from = ''
+  
+        self.args = o2pop.args
+        self.params = o2pop.params
+        self.params.parent = self
+        self.params.store_dir = self.store_dir = os.path.join(get_datadir(), MY_APP_NAME)
 
         self.ini_file = os.path.join(self.store_dir, 'o2popper_ini' + '.pickle')
         if os.path.exists(self.ini_file):
@@ -127,8 +171,11 @@ class MainMenu(wx.adv.TaskBarIcon):
                 ini_data = pickle.load(ini)
 
             self.email = ini_data['email']
+            self.login_hint = ini_data.get('login_hint', False) # new
             self.built_in = ini_data['built_in']
             self.path = ini_data['path']
+            self.client_id = ini_data.get('client_id') # new
+            self.client_secret = ini_data.get('client_secret') # new
             self.smtp = ini_data['smtp']
             self.smtp_port = ini_data['smtp_port']
             self.pop = ini_data['pop']
@@ -137,33 +184,42 @@ class MainMenu(wx.adv.TaskBarIcon):
 
             self.to_cc_max = ini_data['to_cc_max']
             self.to_cc_exclude = ini_data['to_cc_exclude']
-            self.remove_header = ini_data['remove_header']
             self.send_delay = ini_data['send_delay']
+            self.remove_header = ini_data['remove_header']
+            self.change_env_from = ini_data.get('change_env_from', False) # new
+            self.block_list = ini_data.get('block_list', DEFAULT_BLOCK_LIST) # new
+            self.block_list_parsed = None
 
+            self.params_info = ''
+            self.set_client_config()
         else:
             self.email = ''
+            self.login_hint = False
             self.built_in = True
             self.path = ''
+            self.client_id = None
+            self.client_secret = None
             self.smtp = True
-            self.smtp_port = o2pop.args.smtp_port
+            self.smtp_port = self.args.smtp_port
             self.pop = True
-            self.pop_port = o2pop.args.pop_port
+            self.pop_port = self.args.pop_port
             self.start_init = False
 
             self.to_cc_max = 10
             self.to_cc_exclude = ''
-            self.remove_header = False
             self.send_delay = 5
+            self.remove_header = False
+            self.change_env_from = False
+            self.block_list = DEFAULT_BLOCK_LIST
+            self.block_list_parsed = parse_block_list(self.block_list)
 
-        self.get_token_file = o2pop.get_token_file
-        self.get_token = o2pop.get_token
+            self.params_info = self.params.info()
 
         # ------------------------------------------------------------
 
         self.block_smtp_event, evt_delay = wx.lib.newevent.NewEvent()
         self.Bind(evt_delay, self.on_delay)
         self.block_smtp = BlockSmtp(self)
-        o2pop.BLOCK_SMTP = self.block_smtp
 
         # ------------------------------------------------------------
 
@@ -183,6 +239,26 @@ class MainMenu(wx.adv.TaskBarIcon):
 
         self.thread = threading.Thread(target=self.do_task)
         self.thread.start()
+
+    def set_client_config(self):
+        if self.email:
+            self.params.email = self.email.encode()
+        
+        if self.built_in:
+            self.params.path = None
+        else:
+            self.params.path = self.path
+
+        self.args.no_smtp = not self.smtp
+        self.args.smtp_port = self.smtp_port
+
+        self.args.no_pop = not self.pop
+        self.args.pop_port = self.pop_port
+
+        self.block_list_parsed = parse_block_list(self.block_list)
+
+        self.params.reset(self)
+        self.params_info = self.params.info()
 
     def on_delay(self, e):
         dlg = SendingDialog(self, None, title=_("Delay Sending"), style=wx.DEFAULT_DIALOG_STYLE|wx.STAY_ON_TOP)
@@ -257,28 +333,15 @@ class MainMenu(wx.adv.TaskBarIcon):
 
         if result != wx.ID_OK:
             return
-        o2pop.args.email = self.email
-        if self.email:
-            o2pop.EMAIL = self.email.encode()
 
-        if self.built_in:
-            o2pop.args.client_secret_file = None
-        else:
-            o2pop.args.client_secret_file = self.path
-
-        o2pop.client_config = o2pop.load_client_secret_file(o2pop.args.client_secret_file)
-        o2pop.client_id, o2pop.client_secret = o2pop.get_id_secret(o2pop.client_config)
-
-        o2pop.args.no_smtp = not self.smtp
-        o2pop.args.smtp_port = self.smtp_port
-
-        o2pop.args.no_pop = not self.pop
-        o2pop.args.pop_port = self.pop_port
+        self.set_client_config()
 
         ini_data = {
             'email': self.email,
+            'login_hint': self.login_hint,
             'built_in': self.built_in,
             'path': self.path,
+
             'smtp': self.smtp,
             'smtp_port': self.smtp_port,
             'pop': self.pop,
@@ -287,9 +350,16 @@ class MainMenu(wx.adv.TaskBarIcon):
 
             'to_cc_max': self.to_cc_max,
             'to_cc_exclude': self.to_cc_exclude,
-            'remove_header': self.remove_header,
             'send_delay': self.send_delay,
+            'remove_header': self.remove_header,
+            'change_env_from': self.change_env_from,
+            'block_list': self.block_list,
         }
+
+        if self.client_id:
+            ini_data['client_id'] = self.client_id
+        if self.client_secret:
+            ini_data['client_secret'] = self.client_secret
 
         if not os.path.exists(self.store_dir):
             os.makedirs(self.store_dir)
@@ -394,7 +464,7 @@ class App(wx.App):
         if platform.system() == 'Darwin':
             o2pop.args.ca_file = '/etc/ssl/cert.pem'
 
-        o2pop.IP_ADDR = o2pop.get_ip()
+        o2pop.params.ip_addr = o2pop.get_ip()
 
         return True
 
