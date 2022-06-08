@@ -180,6 +180,7 @@ class MainMenu(wx.adv.TaskBarIcon):
             self.smtp_port = ini_data['smtp_port']
             self.pop = ini_data['pop']
             self.pop_port = ini_data['pop_port']
+            self.host_address = ini_data['host_address']
             self.start_init = ini_data['start_init']
 
             self.to_cc_max = ini_data['to_cc_max']
@@ -203,6 +204,7 @@ class MainMenu(wx.adv.TaskBarIcon):
             self.smtp_port = self.args.smtp_port
             self.pop = True
             self.pop_port = self.args.pop_port
+            self.host_address = self.args.host_address
             self.start_init = False
 
             self.to_cc_max = 10
@@ -254,6 +256,8 @@ class MainMenu(wx.adv.TaskBarIcon):
 
         self.args.no_pop = not self.pop
         self.args.pop_port = self.pop_port
+        
+        self.args.host_address = self.host_address
 
         self.block_list_parsed = parse_block_list(self.block_list)
 
@@ -346,6 +350,7 @@ class MainMenu(wx.adv.TaskBarIcon):
             'smtp_port': self.smtp_port,
             'pop': self.pop,
             'pop_port': self.pop_port,
+            'host_address': self.host_address,
             'start_init': self.start_init,
 
             'to_cc_max': self.to_cc_max,

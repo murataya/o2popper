@@ -847,11 +847,11 @@ async def main(parent=None):
     loop = asyncio.get_running_loop()
 
     if not args.no_pop:
-        pop_server = start_server(handle_pop, LOCAL_HOST, args.pop_port, 'pop')
+        pop_server = start_server(handle_pop, args.host_address, args.pop_port, 'pop')
     if not args.no_smtp:
         if args.verbose:
             print('local ip:', params.ip_addr)
-        smtp_server = start_server(handle_smtp, LOCAL_HOST, args.smtp_port, 'smtp')
+        smtp_server = start_server(handle_smtp, args.host_address, args.smtp_port, 'smtp')
     
     if parent is None:
         if args.no_pop:
@@ -1010,6 +1010,7 @@ group.add_argument("--no_smtp", help="disable smtp proxy", action="store_true")
 group.add_argument("--no_pop", help="disable pop proxy", action="store_true")
 parser.add_argument("--smtp_port", type=int, default=LOCAL_SMTP_PORT, help="smtp listen port (default: %(default)s)")
 parser.add_argument("--pop_port", type=int, default=LOCAL_POP_PORT, help="pop listen port (default: %(default)s)")
+parser.add_argument("--host_address", type=str, default=LOCAL_HOST, help="listener host address (default: %(default)s)")
 parser.add_argument("--ca_file", help="CA file")
 parser.add_argument("-f", "--client_secret_file", help="client secret file")
 
