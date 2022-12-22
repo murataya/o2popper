@@ -1,7 +1,7 @@
 #
 # monitor.py (for O2Popper)
 #
-# Copyright (c) 2020-2021 MURATA Yasuhisa
+# Copyright (c) 2020-2022 MURATA Yasuhisa
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
@@ -102,7 +102,13 @@ class Monitor(wx.Dialog):
         # ----------------------------------------------------------
 
         hbox9 = wx.BoxSizer(wx.HORIZONTAL)
-        
+
+        text_level = wx.StaticText(self, label=_("Level"))
+        self.choice = wx.Choice(self, choices=["1", "2"])
+        self.choice.SetToolTip(_("1: hide credentials, 2: not hide"))
+        self.choice.SetSelection(0)
+        self.choice.Bind(wx.EVT_CHOICE, self.on_choice)
+
         button_clear = wx.Button(self, wx.ID_CLEAR, label=_("Clear"))
         button_clear.Bind(wx.EVT_BUTTON, self.on_clear)
 
@@ -122,9 +128,10 @@ class Monitor(wx.Dialog):
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
-        hbox9.Add(button_clear, flag=wx.LEFT, border=5)
+        hbox9.Add(text_level, flag=wx.ALIGN_CENTER_VERTICAL)
+        hbox9.Add(self.choice, flag=wx.LEFT, border=5)
+        hbox9.Add(button_clear, flag=wx.LEFT, border=30)
         hbox9.Add(self.button_start, flag=wx.LEFT, border=5)
-
         hbox9.Add(self.button_stop, flag=wx.LEFT, border=5)
         hbox9.Add(button_close, flag=wx.LEFT|wx.RIGHT, border=5)
 
@@ -137,7 +144,7 @@ class Monitor(wx.Dialog):
 
         # ----------------------------------------------------------
 
-        parent.set_verbose(True)
+        parent.set_verbose(1)
 
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.on_timer, source=self.timer)
@@ -145,6 +152,13 @@ class Monitor(wx.Dialog):
 
     def on_timer(self, evt):
         self.text.flush()
+
+    def on_choice(self, evt):
+        i = self.choice.GetSelection()
+        if i == 0: # level 1
+            self.parent.args.verbose = 1
+        else: # level 2
+            self.parent.args.verbose = 2
 
     def on_clear(self, evt):
         self.logger.Clear()
@@ -163,7 +177,7 @@ class Monitor(wx.Dialog):
         self.parent.task_cancel(self.parent.task)
 
     def on_close(self, evt):
-        self.parent.set_verbose(False)
+        self.parent.set_verbose(0)
         if self.parent.start_check:
             self.parent.start_check = False
             self.parent.task_cancel(self.parent.task)

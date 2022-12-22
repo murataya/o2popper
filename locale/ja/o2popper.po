@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"POT-Creation-Date: 2021-12-20 09:59+0900\n"
-"PO-Revision-Date: 2021-12-20 11:08+0900\n"
+"POT-Creation-Date: 2022-12-21 10:51+0900\n"
+"PO-Revision-Date: 2022-12-21 10:59+0900\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: ja\n"
@@ -14,65 +14,65 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
-"X-Generator: Poedit 3.0.1\n"
+"X-Generator: Poedit 3.2.2\n"
 
-#: o2popper.py:57
+#: o2popper.py:58
 msgid "Waiting to be sent..."
 msgstr "送信されるのを待っています..."
 
-#: o2popper.py:76
+#: o2popper.py:77
 msgid "Envelope-From:"
 msgstr "エンベロープFrom:"
 
-#: o2popper.py:87
+#: o2popper.py:88
 msgid "To+Cc+Bcc:"
 msgstr ""
 
-#: o2popper.py:100
+#: o2popper.py:101
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: o2popper.py:264
+#: o2popper.py:302
 msgid "Delay Sending"
 msgstr "送信遅延"
 
-#: o2popper.py:275
+#: o2popper.py:313
 msgid "Settings..."
 msgstr "設定..."
 
-#: o2popper.py:285
+#: o2popper.py:323
 msgid "Monitor..."
 msgstr "モニター..."
 
-#: o2popper.py:295
+#: o2popper.py:333
 msgid "Start"
 msgstr "開始"
 
-#: o2popper.py:298
+#: o2popper.py:336
 msgid "Stop"
 msgstr "停止"
 
-#: o2popper.py:311
+#: o2popper.py:349
 msgid "About..."
 msgstr "O2Popper について..."
 
-#: o2popper.py:317
+#: o2popper.py:355
 msgid "Exit"
 msgstr "終了"
 
-#: o2popper.py:330
+#: o2popper.py:368
 msgid "Settings"
 msgstr "設定"
 
-#: o2popper.py:371
+#: o2popper.py:415
 msgid "Monitor"
 msgstr "モニター"
 
-#: o2popper.py:457 settings.py:420
+#: o2popper.py:509 settings.py:576
 msgid "Error"
 msgstr "エラー"
 
-#: o2popper.py:457
+#: o2popper.py:509
 msgid "is running"
 msgstr "は実行中です"
 
@@ -92,137 +92,162 @@ msgstr "認可..."
 msgid "Send login_hint"
 msgstr "ヒント (login_hint) を送信"
 
-#: settings.py:66
+#: settings.py:62
+msgid "Actions"
+msgstr "操作"
+
+#: settings.py:62
+msgid "Add"
+msgstr "追加"
+
+#: settings.py:62
+msgid "Remove"
+msgstr "削除"
+
+#: settings.py:63
+msgid "Account Actions"
+msgstr "アカウント操作"
+
+#: settings.py:74
 msgid "Secret File:"
 msgstr "シークレット ファイル:"
 
-#: settings.py:70
+#: settings.py:78
 msgid "Built-in"
 msgstr "組み込み"
 
-#: settings.py:83
+#: settings.py:91
 msgid "Browse..."
 msgstr "参照..."
 
-#: settings.py:92
+#: settings.py:100
 msgid "Details"
 msgstr "詳細"
 
-#: settings.py:96
+#: settings.py:104
 msgid "Client ID:"
 msgstr "クライアント ID:"
 
-#: settings.py:105 settings.py:121
+#: settings.py:113 settings.py:129
 msgid "Edit"
 msgstr "編集"
 
-#: settings.py:111
+#: settings.py:119
 msgid "Client Secret:"
 msgstr "クライアント シークレット:"
 
-#: settings.py:127
+#: settings.py:135
 msgid "Parameters:"
 msgstr "パラメーター:"
 
-#: settings.py:148
+#: settings.py:156
 msgid "SMTP"
 msgstr ""
 
-#: settings.py:153 settings.py:168
+#: settings.py:161 settings.py:175 settings.py:189
 msgid "Port"
 msgstr "ポート"
 
-#: settings.py:165
+#: settings.py:172
 msgid "POP"
 msgstr ""
 
-#: settings.py:179
+#: settings.py:186
+msgid "IMAP"
+msgstr ""
+
+#: settings.py:199
 msgid "Initial State:"
 msgstr "初期状態:"
 
-#: settings.py:201
+#: settings.py:221
 msgid "To+Cc Max"
 msgstr "To+Cc 最大数"
 
-#: settings.py:209
+#: settings.py:229
 msgid "Exclude"
 msgstr "除外"
 
-#: settings.py:217
+#: settings.py:237
 msgid "Send Delay"
 msgstr "送信遅延"
 
-#: settings.py:224
+#: settings.py:244
 msgid "sec"
 msgstr "秒"
 
-#: settings.py:231
+#: settings.py:251
 msgid "Remove X-Mailer/User-Agent header"
 msgstr "X-Mailer/User-Agent ヘッダーを削除"
 
-#: settings.py:237
+#: settings.py:257
 msgid "Change Envelope-From"
 msgstr "エンベロープFrom を変更"
 
-#: settings.py:243
+#: settings.py:263
 msgid "Block list:"
 msgstr "ブロックリスト:"
 
-#: settings.py:253
+#: settings.py:273
 msgid "OAuth2"
 msgstr ""
 
-#: settings.py:254
+#: settings.py:274
 msgid "Listen"
 msgstr "接続の受付"
 
-#: settings.py:255
+#: settings.py:275
 msgid "Block SMTP"
 msgstr "SMTP遮断"
 
-#: settings.py:261
+#: settings.py:281
 msgid "OK"
 msgstr ""
 
-#: settings.py:330 settings.py:413
+#: settings.py:479 settings.py:529 settings.py:626
 msgid "Invalid email"
 msgstr "不正なEメール"
 
-#: settings.py:342
-msgid "Question"
-msgstr "質問"
-
-#: settings.py:342
-msgid "Reset auth-token?"
-msgstr "認証トークンをリセットしますか?"
-
-#: settings.py:370
-msgid "Authorization was successful"
-msgstr "認可は成功しました"
-
-#: settings.py:370
-msgid "Success"
-msgstr "成功"
-
-#: settings.py:387
-msgid "Choose a file"
-msgstr "ファイルを選択"
-
-#: settings.py:420
+#: settings.py:487 settings.py:633
 msgid "File does not exist:"
 msgstr "ファイルが存在しません:"
 
-#: settings.py:424
-msgid "Both SMTP and POP are unchecked"
-msgstr "SMTPとPOPの両方がチェックされていません"
+#: settings.py:546
+msgid "Question"
+msgstr "質問"
+
+#: settings.py:546
+msgid "Reset auth-token?"
+msgstr "認証トークンをリセットしますか?"
+
+#: settings.py:574
+msgid "Authorization was successful"
+msgstr "認可は成功しました"
+
+#: settings.py:574
+msgid "Success"
+msgstr "成功"
+
+#: settings.py:592
+msgid "Choose a file"
+msgstr "ファイルを選択"
+
+#: settings.py:637
+msgid "SMTP, POP and IMAP are all unchecked"
+msgstr "SMTP、POP、IMAPの全てがチェックされていません"
 
 #: monitor.py:106
+msgid "Level"
+msgstr "レベル"
+
+#: monitor.py:108
+msgid "1: hide credentials, 2: not hide"
+msgstr "1: 認証情報を隠す, 2: 隠さない"
+
+#: monitor.py:112
 msgid "Clear"
 msgstr "クリア"
 
-#: monitor.py:120
+#: monitor.py:126
 msgid "Close"
 msgstr "閉じる"
-
-#~ msgid "Authorization"
-#~ msgstr "認可"

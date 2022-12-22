@@ -1,7 +1,7 @@
 #
 # o2popper.py
 #
-# Copyright (c) 2020-2021 MURATA Yasuhisa
+# Copyright (c) 2020-2022 MURATA Yasuhisa
 #
 # This software is released under the MIT License.
 # https://opensource.org/licenses/MIT
@@ -21,11 +21,12 @@ import threading
 import sys
 import pickle
 import os
+import locale
 
 import settings
 import monitor
 
-__version__ = '2.0.0'
+__version__ = '3.0.0'
 
 MY_APP_NAME = 'O2Popper'
 
@@ -115,19 +116,6 @@ class SendingDialog(wx.Dialog):
     def on_close(self, evt):
         self.EndModal(wx.ID_CLOSE)
 
-def get_datadir():
-    home = os.path.expanduser('~')
-    pf = platform.system()
-
-    if pf == 'Windows':
-        return os.path.join(home, 'AppData', 'Roaming')
-    elif pf == 'Linux':
-        return os.path.join(home, '.local', 'share')
-    elif pf == 'Darwin':
-        return os.path.join(home, 'Library', 'Application Support')
-    else:
-        return ''
-
 def parse_block_list(block_list):
     if not block_list:
         return None
@@ -146,9 +134,13 @@ class MainMenu(wx.adv.TaskBarIcon):
         super().__init__()
 
         data = base64.b64decode(icon_data.ICON_DATA)
-        bitmap = wx.Image(BytesIO(data)).ConvertToBitmap()
-        self.icon = wx.Icon()
-        self.icon.CopyFromBitmap(bitmap)
+        image = wx.Image(BytesIO(data))
+        bitmap48 = image.ConvertToBitmap()
+        self.icon48 = wx.Icon(bitmap48)
+
+        bitmap16 = image.Scale(16, 16, wx.IMAGE_QUALITY_HIGH).ConvertToBitmap()
+        self.icon = wx.Icon(bitmap16)
+
         self.SetIcon(self.icon, tooltip=MY_APP_NAME)
         self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.on_left_down)
 
@@ -161,38 +153,20 @@ class MainMenu(wx.adv.TaskBarIcon):
         self.env_from = ''
   
         self.args = o2pop.args
-        self.params = o2pop.params
+        self.params = o2pop.params_main
         self.params.parent = self
-        self.params.store_dir = self.store_dir = os.path.join(get_datadir(), MY_APP_NAME)
 
+        std_paths = wx.StandardPaths.Get()
+        self.params.store_dir = self.store_dir = std_paths.GetUserDataDir()
+
+        ini_file_loaded = False
         self.ini_file = os.path.join(self.store_dir, 'o2popper_ini' + '.pickle')
         if os.path.exists(self.ini_file):
             with open(self.ini_file, 'rb') as ini:
                 ini_data = pickle.load(ini)
+            ini_file_loaded = True
 
-            self.email = ini_data['email']
-            self.login_hint = ini_data.get('login_hint', False) # new
-            self.built_in = ini_data['built_in']
-            self.path = ini_data['path']
-            self.client_id = ini_data.get('client_id') # new
-            self.client_secret = ini_data.get('client_secret') # new
-            self.smtp = ini_data['smtp']
-            self.smtp_port = ini_data['smtp_port']
-            self.pop = ini_data['pop']
-            self.pop_port = ini_data['pop_port']
-            self.start_init = ini_data['start_init']
-
-            self.to_cc_max = ini_data['to_cc_max']
-            self.to_cc_exclude = ini_data['to_cc_exclude']
-            self.send_delay = ini_data['send_delay']
-            self.remove_header = ini_data['remove_header']
-            self.change_env_from = ini_data.get('change_env_from', False) # new
-            self.block_list = ini_data.get('block_list', DEFAULT_BLOCK_LIST) # new
-            self.block_list_parsed = None
-
-            self.params_info = ''
-            self.set_client_config()
-        else:
+        if not ini_file_loaded:
             self.email = ''
             self.login_hint = False
             self.built_in = True
@@ -203,6 +177,8 @@ class MainMenu(wx.adv.TaskBarIcon):
             self.smtp_port = self.args.smtp_port
             self.pop = True
             self.pop_port = self.args.pop_port
+            self.imap = False
+            self.imap_port = self.args.imap_port
             self.start_init = False
 
             self.to_cc_max = 10
@@ -214,6 +190,39 @@ class MainMenu(wx.adv.TaskBarIcon):
             self.block_list_parsed = parse_block_list(self.block_list)
 
             self.params_info = self.params.info()
+        else:
+            self.email = ini_data['email']
+            self.login_hint = ini_data.get('login_hint', False) # new
+            self.built_in = ini_data['built_in']
+            self.path = ini_data['path']
+            self.client_id = ini_data.get('client_id') # new
+            self.client_secret = ini_data.get('client_secret') # new
+            self.smtp = ini_data['smtp']
+            self.smtp_port = ini_data['smtp_port']
+            self.pop = ini_data['pop']
+            self.pop_port = ini_data['pop_port']
+            self.imap = ini_data.get('imap', False) # new
+            self.imap_port = ini_data.get('imap_port', self.args.imap_port) # new
+            self.start_init = ini_data['start_init']
+
+            self.to_cc_max = ini_data['to_cc_max']
+            self.to_cc_exclude = ini_data['to_cc_exclude']
+            self.send_delay = ini_data['send_delay']
+            self.remove_header = ini_data['remove_header']
+            self.change_env_from = ini_data.get('change_env_from', False) # new
+            self.block_list = ini_data.get('block_list', DEFAULT_BLOCK_LIST) # new
+            self.block_list_parsed = None
+
+            self.params_info = ''
+
+        self.sub_file = os.path.join(self.store_dir, 'o2popper_sub' + '.pickle')
+        self.sub_data = {}
+        self.params_sub_info = {}
+        if ini_file_loaded:
+            if os.path.exists(self.sub_file):
+                with open(self.sub_file, 'rb') as sub:
+                    self.sub_data = pickle.load(sub)
+            self.set_client_config()
 
         # ------------------------------------------------------------
 
@@ -249,16 +258,45 @@ class MainMenu(wx.adv.TaskBarIcon):
         else:
             self.params.path = self.path
 
-        self.args.no_smtp = not self.smtp
+        self.args.smtp = self.smtp
         self.args.smtp_port = self.smtp_port
 
-        self.args.no_pop = not self.pop
+        self.args.pop = self.pop
         self.args.pop_port = self.pop_port
+
+        self.args.imap = self.imap
+        self.args.imap_port = self.imap_port
 
         self.block_list_parsed = parse_block_list(self.block_list)
 
         self.params.reset(self)
         self.params_info = self.params.info()
+
+        if not self.sub_data:
+            self.args.user_params = {}
+            return
+
+        user_params = {}
+        params_sub_info = {}
+        for user, account_data in self.sub_data.items():
+            if account_data['built_in']:
+                path = None
+            else:
+                path = account_data['path']
+            params_sub = o2pop.Params(path)
+            params_sub.store_dir = self.store_dir
+
+            config = params_sub.client_config['installed']
+
+            if 'client_id' in account_data:
+                params_sub.client_id = config['client_id'] = account_data['client_id']
+            if 'client_secret' in account_data:
+                params_sub.client_secret = config['client_secret']= account_data['client_secret']
+            user_params[user] = params_sub
+            params_sub_info[user] = params_sub.info()
+
+        self.args.user_params = user_params
+        self.params_sub_info = params_sub_info
 
     def on_delay(self, e):
         dlg = SendingDialog(self, None, title=_("Delay Sending"), style=wx.DEFAULT_DIALOG_STYLE|wx.STAY_ON_TOP)
@@ -346,6 +384,8 @@ class MainMenu(wx.adv.TaskBarIcon):
             'smtp_port': self.smtp_port,
             'pop': self.pop,
             'pop_port': self.pop_port,
+            'imap': self.imap,
+            'imap_port': self.imap_port,
             'start_init': self.start_init,
 
             'to_cc_max': self.to_cc_max,
@@ -366,6 +406,10 @@ class MainMenu(wx.adv.TaskBarIcon):
 
         with open(self.ini_file, 'wb') as ini:
             pickle.dump(ini_data, ini)
+
+        if self.sub_data or os.path.exists(self.sub_file):
+            with open(self.sub_file, 'wb') as sub:
+                pickle.dump(self.sub_data, sub)
 
     def on_monitor(self, e):
         dlg = monitor.Monitor(self, None, title=_("Monitor"), style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
@@ -411,9 +455,9 @@ class MainMenu(wx.adv.TaskBarIcon):
         aboutInfo = wx.adv.AboutDialogInfo()
         aboutInfo.SetName(MY_APP_NAME)
         aboutInfo.SetVersion(__version__)
-        aboutInfo.SetCopyright("(C) 2020-2021 MURATA Yasuhisa")
+        aboutInfo.SetCopyright("(C) 2020-2022 MURATA Yasuhisa")
         aboutInfo.SetWebSite("https://www.nips.ac.jp/~murata/o2popper/")
-        aboutInfo.SetIcon(self.icon)
+        aboutInfo.SetIcon(self.icon48)
 
         t = sys.version
         i = t.find('(')
@@ -430,6 +474,7 @@ class MainMenu(wx.adv.TaskBarIcon):
 
 class App(wx.App):
     def OnInit(self):
+        self.SetAppName(MY_APP_NAME)
 
         if getattr(sys, 'frozen', False):
             basedir = os.path.dirname(sys.executable)
@@ -440,7 +485,13 @@ class App(wx.App):
         wx.Locale.AddCatalogLookupPathPrefix(locale_dir)
 
         if os.path.exists(locale_dir):
-            lang = wx.LANGUAGE_DEFAULT
+            # lang = wx.LANGUAGE_DEFAULT
+            lang = wx.Locale.GetSystemLanguage()
+            if lang == wx.LANGUAGE_UNKNOWN: # for mac
+                if LC[0] == "ja_JP":
+                    lang = wx.LANGUAGE_JAPANESE_JAPAN
+                else:
+                    lang = wx.LANGUAGE_ENGLISH_US
         else:
             lang = wx.LANGUAGE_ENGLISH_US
 
@@ -451,7 +502,8 @@ class App(wx.App):
             self.locale = None
 
         self.name = MY_APP_NAME + '-%s' % wx.GetUserId()
-        self.instance = wx.SingleInstanceChecker(self.name)
+        std_paths = wx.StandardPaths.Get()
+        self.instance = wx.SingleInstanceChecker(self.name, path=std_paths.GetUserDataDir())
 
         if self.instance.IsAnotherRunning():
             wx.MessageBox(MY_APP_NAME + " " + _("is running"), caption=_("Error"), style=wx.ICON_ERROR)
@@ -464,11 +516,12 @@ class App(wx.App):
         if platform.system() == 'Darwin':
             o2pop.args.ca_file = '/etc/ssl/cert.pem'
 
-        o2pop.params.ip_addr = o2pop.get_ip()
+        o2pop.params_main.ip_addr = o2pop.get_ip()
 
         return True
 
 try:
+    LC = locale.getlocale()
     app = App()
 except:
     sys.exit(0)
