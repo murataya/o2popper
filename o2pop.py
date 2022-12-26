@@ -28,7 +28,7 @@ try:
 except ImportError:
     import client_secret_data
 
-__version__ = '3.0.0'
+__version__ = '3.0.1'
 
 PROG = 'o2pop'
 
@@ -972,7 +972,7 @@ async def smtp_init(local_reader, local_writer, remote):
         s = await remote_reader.readline()
         if verbose:
             print2("<<<", s)
-        if not s.startswith(b'250'):
+        if not s.startswith(b'220'):
             err = True
             err_msg = b'552 STARTTLS command failed\r\n'
 

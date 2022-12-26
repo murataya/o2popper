@@ -26,7 +26,7 @@ import locale
 import settings
 import monitor
 
-__version__ = '3.0.0'
+__version__ = '3.0.1'
 
 MY_APP_NAME = 'O2Popper'
 
